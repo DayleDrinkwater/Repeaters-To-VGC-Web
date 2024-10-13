@@ -108,8 +108,7 @@ document.getElementById('repeaterForm').addEventListener('submit', async (event)
 
     const config = countryConfig[country] || countryConfig.default;
 
-    const proxyUrl = 'https://cors-proxy.fringe.zone/';
-    const response = await fetch(proxyUrl + config.apiUrl);
+    const response = await fetch(config.apiUrl, { mode: 'no-cors' });
     const data = await response.json();
 
     const filteredData = config.filterData(data);
