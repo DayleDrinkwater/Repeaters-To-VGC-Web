@@ -111,7 +111,16 @@ document.getElementById('repeaterForm').addEventListener('submit', async (event)
 
     for (const item of filteredData) {
         if (totalEntries >= numEntries) break;
-        const ctcssValue = country === 'UK' ? Math.round(Number.parseFloat(item.ctcss) * 100) : item.encode;
+        let ctcssValue;
+        if (country === 'UK') {
+            ctcssValue = Math.round(Number.parseFloat(item.ctcss) * 100);
+        } else {
+            if (item.encode.startsWith('DCS')) {
+                ctcssValue = item.encode.slice(3); // Extract the numeric part after 'DCS'
+            } else {
+                ctcssValue = item.encode;
+            }
+        }
         const row = [
             country === 'UK' ? item.repeater : item.callsign,
             country === 'UK' ? String(item.rx).replace('.', '') : item.frequency,
