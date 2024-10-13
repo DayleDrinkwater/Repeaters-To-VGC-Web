@@ -62,7 +62,8 @@ document.getElementById('repeaterForm').addEventListener('submit', async (event)
         apiUrl = "https://hearham.com/api/repeaters/v1";
     }
 
-    const response = await fetch(apiUrl);
+    const proxyUrl = 'https://cors-proxy.fringe.zone/';
+    const response = await fetch(proxyUrl + apiUrl);
     const data = await response.json();
 
     let filteredData;
