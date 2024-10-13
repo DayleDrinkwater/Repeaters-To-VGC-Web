@@ -39,7 +39,8 @@
 
     <script src="script.js"></script>
     <script>
-        const response = await fetch(apiUrl, { mode: 'no-cors' });
+        const proxyUrl = 'https://cors-proxy.fringe.zone/';
+        const response = await fetch(proxyUrl + apiUrl);
         const data = await response.json();
     </script>
 </body>
