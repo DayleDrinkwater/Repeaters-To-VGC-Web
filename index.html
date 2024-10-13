@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repeater Data Generator for VGC Radios</title>
+</head>
+<body>
+    <h1>Repeater Data Generator for VGC Radios</h1>
+    <h2>By Dayle M0OUE</h2>
+    <form id="repeaterForm">
+        <label for="gridLocator">Enter the grid locator (e.g., IO83PK):</label>
+        <input type="text" id="gridLocator" name="gridLocator" required><br><br>
+
+        <label for="aprsEntry">Should the APRS entry be included at position 1?</label>
+        <select id="aprsEntry" name="aprsEntry">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+        </select><br><br>
+
+        <label for="numEntries">How many entries do you wish to have? (16 or 32):</label>
+        <select id="numEntries" name="numEntries">
+            <option value="16">16</option>
+            <option value="32">32</option>
+        </select><br><br>
+
+        <button type="submit">Generate CSV</button>
+    </form>
+
+    <a id="downloadLink" style="display:none;">Download CSV</a>
+
+    <p>Note: You will need the latest version of the Android app from Vero's website to use the generated CSV file.</p>
+
+    <script src="script.js"></script>
+</body>
+</html>
