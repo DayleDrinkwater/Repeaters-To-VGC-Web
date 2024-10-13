@@ -66,7 +66,8 @@ const countryConfig = {
             item.txbw === 12.5 ? '12500' : '25000',
             '1', '0', '0', '0', '0', '0', '0', '0'
         ].join(','),
-        getLocation: (item) => toLocation(item.locator)
+        getLocation: (item) => toLocation(item.locator),
+        getApiUrl: function() { return this.apiUrl; }
     },
     default: {
         apiUrl: "https://hearham.com/api/repeaters/v1",
@@ -94,7 +95,8 @@ const countryConfig = {
                 '1', '0', '0', '0', '0', '0', '0', '0'
             ].join(',');
         },
-        getLocation: (item) => [item.latitude, item.longitude]
+        getLocation: (item) => [item.latitude, item.longitude],
+        getApiUrl: function() { return `https://cors-proxy.daylecdrinkwater.workers.dev/?${this.apiUrl}`; }
     }
 };
 
@@ -108,57 +110,52 @@ document.getElementById('repeaterForm').addEventListener('submit', async (event)
 
     const config = countryConfig[country] || countryConfig.default;
 
-    try {
-        const response = await fetch(config.apiUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+    const apiUrl = config.getApiUrl();
 
-        const filteredData = config.filterData(data);
+    const response = await fetch(apiUrl);
+    const data = await response.json();
 
-        const userLocation = toLocation(gridLocator);
+    const filteredData = config.filterData(data);
 
-        filteredData.sort((a, b) => {
-            const locA = config.getLocation(a);
-            const locB = config.getLocation(b);
-            const distA = haversineDistance(userLocation, locA);
-            const distB = haversineDistance(userLocation, locB);
-            return distA - distB;
-        });
+    const userLocation = toLocation(gridLocator);
 
-        const csvHeaders = [
-            'title', 'tx_freq', 'rx_freq', 'tx_sub_audio(CTCSS=freq/DCS=number)', 
-            'rx_sub_audio(CTCSS=freq/DCS=number)', 'tx_power(H/M/L)', 'bandwidth(12500/25000)', 
-            'scan(0=OFF/1=ON)', 'talk around(0=OFF/1=ON)', 'pre_de_emph_bypass(0=OFF/1=ON)', 
-            'sign(0=OFF/1=ON)', 'tx_dis(0=OFF/1=ON)', 'mute(0=OFF/1=ON)', 
-            'rx_modulation(0=FM/1=AM)', 'tx_modulation(0=FM/1=AM)'
-        ];
+    filteredData.sort((a, b) => {
+        const locA = config.getLocation(a);
+        const locB = config.getLocation(b);
+        const distA = haversineDistance(userLocation, locA);
+        const distB = haversineDistance(userLocation, locB);
+        return distA - distB;
+    });
 
-        let csvContent = `${csvHeaders.join(',')}\n`;
+    const csvHeaders = [
+        'title', 'tx_freq', 'rx_freq', 'tx_sub_audio(CTCSS=freq/DCS=number)', 
+        'rx_sub_audio(CTCSS=freq/DCS=number)', 'tx_power(H/M/L)', 'bandwidth(12500/25000)', 
+        'scan(0=OFF/1=ON)', 'talk around(0=OFF/1=ON)', 'pre_de_emph_bypass(0=OFF/1=ON)', 
+        'sign(0=OFF/1=ON)', 'tx_dis(0=OFF/1=ON)', 'mute(0=OFF/1=ON)', 
+        'rx_modulation(0=FM/1=AM)', 'tx_modulation(0=FM/1=AM)'
+    ];
 
-        let totalEntries = aprsEntry ? 1 : 0;
-        if (aprsEntry) {
-            const aprsRow = [
-                'APRS', '144800000', '144800000', '', '', 'H', '12500', '0', '0', '0', '0', '0', '0', '0', '0'
-            ].join(',');
-            csvContent += `${aprsRow}\n`;
-        }
+    let csvContent = `${csvHeaders.join(',')}\n`;
 
-        for (const item of filteredData) {
-            if (totalEntries >= numEntries) break;
-            const row = config.formatRow(item);
-            csvContent += `${row}\n`;
-            totalEntries++;
-        }
-
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const downloadLink = document.getElementById('downloadLink');
-        downloadLink.href = url;
-        downloadLink.download = `Repeaters - ${gridLocator}.csv`;
-        downloadLink.style.display = 'block';
-    } catch (error) {
-        console.error('Error fetching data:', error);
+    let totalEntries = aprsEntry ? 1 : 0;
+    if (aprsEntry) {
+        const aprsRow = [
+            'APRS', '144800000', '144800000', '', '', 'H', '12500', '0', '0', '0', '0', '0', '0', '0', '0'
+        ].join(',');
+        csvContent += `${aprsRow}\n`;
     }
+
+    for (const item of filteredData) {
+        if (totalEntries >= numEntries) break;
+        const row = config.formatRow(item);
+        csvContent += `${row}\n`;
+        totalEntries++;
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.getElementById('downloadLink');
+    downloadLink.href = url;
+    downloadLink.download = `Repeaters - ${gridLocator}.csv`;
+    downloadLink.style.display = 'block';
 });
