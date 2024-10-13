@@ -47,6 +47,55 @@ function haversineDistance(coords1, coords2) {
     return R * c;
 }
 
+const countryConfig = {
+    UK: {
+        apiUrl: "https://api-beta.rsgb.online/all/systems",
+        filterData: (data) => data.data.filter(item => 
+            item.modeCodes?.includes('A') &&
+            ['AV', 'DM'].includes(item.type) &&
+            ['2M', '70CM'].includes(item.band) &&
+            item.status === 'OPERATIONAL'
+        ),
+        formatRow: (item) => [
+            item.repeater,
+            String(item.rx).replace('.', ''),
+            String(item.tx).replace('.', ''),
+            Math.round(Number.parseFloat(item.ctcss) * 100),
+            Math.round(Number.parseFloat(item.ctcss) * 100),
+            item.dbwErp > 5 ? 'H' : 'L',
+            item.txbw === 12.5 ? '12500' : '25000',
+            '1', '0', '0', '0', '0', '0', '0', '0'
+        ].join(','),
+        getLocation: (item) => toLocation(item.locator)
+    },
+    default: {
+        apiUrl: "https://hearham.com/api/repeaters/v1",
+        filterData: (data) => data.filter(item => 
+            item.operational === 1 &&
+            item.mode === 'FM'
+        ),
+        formatRow: (item) => {
+            let ctcssValue;
+            if (item.encode.startsWith('DCS')) {
+                ctcssValue = item.encode.slice(3); // Extract the numeric part after 'DCS'
+            } else {
+                ctcssValue = item.encode;
+            }
+            return [
+                item.callsign,
+                item.frequency,
+                item.frequency + item.offset,
+                ctcssValue,
+                ctcssValue,
+                'H',
+                '12500',
+                '1', '0', '0', '0', '0', '0', '0', '0'
+            ].join(',');
+        },
+        getLocation: (item) => [item.latitude, item.longitude]
+    }
+};
+
 document.getElementById('repeaterForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -55,37 +104,19 @@ document.getElementById('repeaterForm').addEventListener('submit', async (event)
     const aprsEntry = document.getElementById('aprsEntry').value === 'yes';
     const numEntries = Number.parseInt(document.getElementById('numEntries').value);
 
-    let apiUrl;
-    if (country === 'UK') {
-        apiUrl = "https://api-beta.rsgb.online/all/systems";
-    } else {
-        apiUrl = "https://hearham.com/api/repeaters/v1";
-    }
+    const config = countryConfig[country] || countryConfig.default;
 
     const proxyUrl = 'https://cors-proxy.fringe.zone/';
-    const response = await fetch(proxyUrl + apiUrl);
+    const response = await fetch(proxyUrl + config.apiUrl);
     const data = await response.json();
 
-    let filteredData;
-    if (country === 'UK') {
-        filteredData = data.data.filter(item => 
-            item.modeCodes?.includes('A') &&
-            ['AV', 'DM'].includes(item.type) &&
-            ['2M', '70CM'].includes(item.band) &&
-            item.status === 'OPERATIONAL'
-        );
-    } else {
-        filteredData = data.filter(item => 
-            item.operational === 1 &&
-            item.mode === 'FM'
-        );
-    }
+    const filteredData = config.filterData(data);
 
     const userLocation = toLocation(gridLocator);
 
     filteredData.sort((a, b) => {
-        const locA = country === 'UK' ? toLocation(a.locator) : [a.latitude, a.longitude];
-        const locB = country === 'UK' ? toLocation(b.locator) : [b.latitude, b.longitude];
+        const locA = config.getLocation(a);
+        const locB = config.getLocation(b);
         const distA = haversineDistance(userLocation, locA);
         const distB = haversineDistance(userLocation, locB);
         return distA - distB;
@@ -111,26 +142,7 @@ document.getElementById('repeaterForm').addEventListener('submit', async (event)
 
     for (const item of filteredData) {
         if (totalEntries >= numEntries) break;
-        let ctcssValue;
-        if (country === 'UK') {
-            ctcssValue = Math.round(Number.parseFloat(item.ctcss) * 100);
-        } else {
-            if (item.encode.startsWith('DCS')) {
-                ctcssValue = item.encode.slice(3); // Extract the numeric part after 'DCS'
-            } else {
-                ctcssValue = item.encode;
-            }
-        }
-        const row = [
-            country === 'UK' ? item.repeater : item.callsign,
-            country === 'UK' ? String(item.rx).replace('.', '') : item.frequency,
-            country === 'UK' ? String(item.tx).replace('.', '') : item.frequency + item.offset,
-            ctcssValue,
-            ctcssValue,
-            country === 'UK' ? (item.dbwErp > 5 ? 'H' : 'L') : 'H',
-            country === 'UK' ? (item.txbw === 12.5 ? '12500' : '25000') : '12500',
-            '1', '0', '0', '0', '0', '0', '0', '0'
-        ].join(',');
+        const row = config.formatRow(item);
         csvContent += `${row}\n`;
         totalEntries++;
     }
