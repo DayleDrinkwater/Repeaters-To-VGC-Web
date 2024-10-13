@@ -72,7 +72,9 @@ const countryConfig = {
         apiUrl: "https://hearham.com/api/repeaters/v1",
         filterData: (data) => data.filter(item => 
             item.operational === 1 &&
-            item.mode === 'FM'
+            item.mode === 'FM' &&
+            ((item.frequency >= 144000000 && item.frequency <= 146000000) ||
+             (item.frequency >= 420000000 && item.frequency <= 450000000))
         ),
         formatRow: (item) => {
             let ctcssValue;
